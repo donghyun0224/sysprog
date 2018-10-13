@@ -1,15 +1,17 @@
 #include <linux/debugfs.h>
 #include <linux/module.h>
 #include <linux/uaccess.h>
-#include <linux/slab.h>
+#include <linux/slab.h> // library for debugfs_blob_wrapper
+
+#define SIZE 8192 // Some large number
 
 MODULE_LICENSE("GPL");
 
 static struct dentry *dir, *inputdir, *ptreedir;
 static struct task_struct *curr;
-struct debugfs_blob_wrapper *myblob;
+struct debugfs_blob_wrapper *myblob; // Maximal data type
 
-char stats[8192];
+char stats[SIZE];
 int i;
 
 static ssize_t write_pid_to_input(struct file *fp, 
@@ -20,17 +22,18 @@ static ssize_t write_pid_to_input(struct file *fp,
         pid_t input_pid;
         struct pid * pid;
 
-        for (i = 0; i < 8192; i++){
+		// Initialize buffer as zero
+        for (i = 0; i < SIZE; i++){
                 stats[i] = '\0';
         }
 
+		// Now, input_pid is correct pid and curr is what correct current task_struct
         sscanf(user_buffer, "%u", &input_pid);
         pid = find_get_pid(input_pid);
-        // curr = pid_task(input_pid, PIDTYPE_PID); // Find task_struct using input_pid. Hint: pid_task
-        curr = pid_task(pid, PIDTYPE_PID); // Find task_struct using input_pid. Hint: pid_task
+        curr = pid_task(pid, PIDTYPE_PID);
+		// Find task_struct using input_pid. Hint: pid_task <- I used it!
 
         // Tracing process tree from input_pid to init(1) process
-        
         while(1) {
             if (curr->pid == 1) break;
             length += sprintf(stats + length, "%s (%d)\n", curr->comm, curr->pid);
@@ -57,48 +60,17 @@ static int __init dbfs_module_init(void)
 
         dir = debugfs_create_dir("ptree", NULL);
 
-        /*
-        if (!dir) {
-                printk("Cannot create ptree dir\n");
-                return -1;
-        }
-        */
 
         struct_size = sizeof(struct debugfs_blob_wrapper);
         stats_size = 8192 * sizeof(char);
 
-        /*
-        if (stats == NULL) {
-                printk("Could not allocate mem for data\n");
-                return -ENOMEM;
-        }
-        */
-
-
         myblob = (struct debugfs_blob_wrapper *) kmalloc(struct_size, GFP_KERNEL);
-
-        /*
-        if (myblob == NULL) {
-                printk("Could not allocate mem for blob\n");
-                kfree(stats);
-                return -ENOMEM;
-        }
-        */
 
         myblob->data = (void *) stats;
         myblob->size = (unsigned long) stats_size;
 
         inputdir = debugfs_create_file("input", 0644, dir, NULL, &dbfs_fops);
         ptreedir = debugfs_create_blob("ptree", 0644, dir, myblob); // Find suitable debugfs API
-
-        /*
-        if (!ptreedir) {
-                printk("error creating int file");
-                kfree(stats);
-                kfree(myblob);
-                return (-ENODEV);
-        }
-        */
 
         return 0;
 }
