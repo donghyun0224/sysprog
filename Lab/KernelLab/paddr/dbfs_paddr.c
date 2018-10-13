@@ -4,6 +4,7 @@
 #include <linux/uaccess.h>
 #include <asm/pgtable.h>
 
+
 #define SIZE 8192
 
 MODULE_LICENSE("GPL");
@@ -17,8 +18,6 @@ struct packet{
         unsigned long paddr;
 };
 
-int i;
-char stats[SIZE];
 struct packet *pckt;
 
 static ssize_t read_output(struct file *fp,
@@ -26,25 +25,50 @@ static ssize_t read_output(struct file *fp,
                         size_t length,
                         loff_t *position)
 {
-        /*
-        pid_t input_pid;
-        struct pid * pid;
-        for (i = 0; i < SIZE; i++) {
-                stats[i] = '\0';
-        }
 
-        sscanf(user_buffer, "%u", &input_pid);
-        pid = find_get_pid(input_pid);
-        task = pid_task(pid, PIDTYPE_PID);
+		// Initialization pckt->pid, pckt->vaddr
+		pckt = (struct packet *)user_buffer;
 
-        // Implement read file operation
+		// TODO: Implement page table model.
+		// Currently, pid and vaddr is valid but paddr is zero.
+		
 
-        pckt->pid = input_pid;
-        pckt->vaddr = 1;
-        pckt->paddr = 1;
-        length += 12;
-        */
+		// Initialized task
+		struct pid *pid;
+		pid = find_get_pid(pckt->pid);
+		task = pid_task(pid, PIDTYPE_PID);
 
+
+		// Decalre pgd, pud, pmd, pte
+		pgd_t *pgd;
+		pud_t *pud;
+		pmd_t *pmd;
+		pte_t *pte;
+
+		unsigned long page_addr = 0;
+		unsigned long page_offset = 0;
+
+
+		// pgd, pud, pmd, pte phase
+		pgd = pgd_offset(task->mm, pckt->vaddr);
+		// Something printk statement
+
+		pud = pud_offset(pgd, pckt->vaddr);
+		// Something printk statement
+
+		pmd = pmd_offset(pud, pckt->vaddr);
+		// Something printk statement
+
+		pte = pte_offset_kernel(pmd, pckt->vaddr);
+		// Something printk statement
+
+
+		// paddr phase
+		page_addr = pte_val(*pte) & PAGE_MASK;
+		page_offset = pckt->vaddr & ~PAGE_MASK;
+		pckt->paddr = page_addr | page_offset;
+
+		length += sizeof(struct packet);
         return length;
 }
 
@@ -65,7 +89,7 @@ static int __init dbfs_module_init(void)
         }
 
         // Fill in the arguments below
-        output = debugfs_create_file("output", 0666, dir, pckt, &dbfs_fops);
+        output = debugfs_create_file("output", 0644, dir, pckt, &dbfs_fops);
 
         return 0;
 }
@@ -73,6 +97,8 @@ static int __init dbfs_module_init(void)
 static void __exit dbfs_module_exit(void)
 {
         // Implement exit module
+		debugfs_remove(output);
+		debugfs_remove_recursive(dir);
 }
 
 module_init(dbfs_module_init);
