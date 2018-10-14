@@ -6,22 +6,25 @@
 \usepackage{mathchars}
 \usepackage{setspace}
 \usepackage{anyfontsize}
+\usepackage{textcomp}
 
 \input{blocked.sty}
 \input{uhead.sty}
 \input{boxit.sty}
 \input{icthesis.sty}
 
+\definecolor{mauve}{RGB}{183, 132, 167}
 
 \lstset{ 
   frame=l,
   language=C++,
-  basicstyle=\ttfamily,
+  basicstyle=\ttfamily\footnotesize,
   numbers=left,
   numberstyle=\tiny\color{gray},
   keywordstyle=\color{blue},
   commentstyle=\color{green}\ttfamily,
   stringstyle=\color{mauve},
+  upquote=true,
 }
 
 \newcommand{\normallinespacing}{\renewcommand{\baselinestretch}{1.5} \normalsize}

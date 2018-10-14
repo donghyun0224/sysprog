@@ -1,6 +1,23 @@
 \chapter{Conclusion}
 % Explain what you have learned in this lab. What was difficult, what was surpsrising, and so on.
+In Kernel lab, I've learned how to implement kernel module programming.
+I've never used kernel information since I am just end user of the system programming.
+\texttt{kamlloc} function and \texttt{printk} function are meaningful to me.
+I did not understand why I have to use that instead of \texttt{malloc} and \texttt{printf}.
+In debugging process(not kernel debugging, my debugging), I use \texttt{dmesg} to show my logs.
+\texttt{printk} function was really helpful. 
 
+The most difficult problem was reboot problem.
+Unlike the previous project, I have to use Gentoo virtual machine since it is a kernel programming.
+After any error, I have to reboot to make the files again.
+If not, teminal says there is module running and kill my processor.
+Although Virtualbox is quite fast, reboot takes some time and makes me annoying.
+
+
+The most surpsrising thing was that physical address is too big.
+\texttt{sudo ./app} says that my \texttt{pid, vaddr, paddr} value is
+\texttt{pid: 3401 vaddr: 12bc010 paddr:8000000070488010}.
+I think I might take some mistakes since the most significant bit in \texttt{paddr} is 1, and the following 7 bits are zero.
 
 % Tips
 % do not copy-paste screenshots of your code. Format it properly as text

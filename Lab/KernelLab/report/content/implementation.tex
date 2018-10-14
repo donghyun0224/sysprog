@@ -39,12 +39,189 @@ Fortunately, I did not have to fix the Makefile.
 
 \section{ptree}
 % explain what you did to solve this phase in detail
-The purpose of this Assignment is tracing process from the leaf to \texttt{init} process and logging it using \texttt{debugfs}.
-ssibal
+The purpose of this assignment is tracing process from the leaf to \texttt{init} process and logging it using \texttt{debugfs}.
+The followings are the steps of tracing process from the leaf to \texttt{init} in \texttt{write\char`_pid\char`_to\char`_pid}.
+We initially store current task in the stack, then trace it by using \texttt{curr->real\char`_parent}.
+The stored task information is popped into \texttt{stat} buffer.
+The printed information in \texttt{stat} is transfered to \texttt{struct debugfs\char`_blob\char`_wrapper *myblob}, which can hold as much data as we want.
 
+\begin{enumerate}
+\item Initialize \texttt{buffer}
 \begin{lstlisting}
-printf("Hello, World!");
+for (i = 0; i < SIZE; i++) {
+    stats[i] = '\0';
+}
 \end{lstlisting}
+
+\item Get \texttt{pid} from \texttt{user\char`_buffer}.
+\begin{lstlisting}
+pid_t input_pid;
+struct pid *pid;
+sscanf(user_buffer, "%u", &input_pid);
+pid = find_get_pid(input_pid);
+\end{lstlisting}
+
+
+\item Get \texttt{task\char`_struct} from \texttt{pid} of 2.
+\begin{lstlisting}
+curr = pid_task(pid, PIDTYPE_PID);
+\end{lstlisting}
+
+\item To print \texttt{pid} reversely, make a simple stack(or linked list)
+\begin{lstlisting}
+struct stack {
+    struct task_struct *task;
+    struct stack *next;
+};
+struct stack *stack, *temp;
+stack = (struct stack *) kmalloc(sizeof(struct stack), GFP_KERNEL);
+temp = (struct stack *) kmalloc(sizeof(struct stack), GFP_KERNEL);
+temp->next = NULL;
+temp->task = curr;
+\end{lstlisting}
+
+\item Trace task struct until \texttt{pid} of the task is equal to 1. (In other words, the task is \texttt{init} struct.)
+The task information is stored in the stack.
+\begin{lstlisting}
+while(1) {
+    stack->next = temp;
+    if (curr->pid == 1) break;
+    curr = curr->real_parent;
+    stack->task = curr;
+    temp = stack;
+    stack = (struct stack *) kmalloc(sizeof(struct stack), GFP_KERNEL);
+}
+stack = stack->next;
+\end{lstlisting}
+
+\item After it reaches to \texttt{init}, pop the stack value on the \texttt{stat} buffer.
+\begin{lstlisting}
+while(1) {
+    curr = stack->task;
+    length += sprintf(stats + length, "%s (%d)\n", curr->comm, curr->pid);
+    stack = stack->next;
+    if (stack == NULL) break;
+}
+\end{lstlisting}
+
+\item Now we complete \texttt{write\char`_pid\char`_to\char`_input}. To use in \texttt{init\char`_module}, we have to save this file operation in \texttt{.write}.
+\begin{lstlisting}
+static const struct file_operations dbfs_fops = {
+    .write = write_pid_to_input,
+};
+\end{lstlisting}
+
+\item In \texttt{\char`_\char`_init dbfs\char`_module\char`_init} function, define \texttt{debugfs\char`_blob\char`_wrapper} type.
+This struct would help us save data what we want, since strings are too big to store.
+\begin{lstlisting}
+int stats_size;
+int struct_size;
+dir = debugfs_create_dir("ptree", NULL);
+struct_size = sizeof(struct debugfs_blob_wrapper);
+stats_size = 8192 * sizeof(char);
+\end{lstlisting}
+
+\item The \texttt{debugfs\char`_blob\char`_wrapper} type variable name is \texttt{myblob}.
+We initialize it with \texttt{kmalloc} since we cannot we \texttt{malloc}.
+Then, store the data and size as we get in the steps 1 to 6.
+\begin{lstlisting}
+myblob = (struct debugfs_blob_wrapper *) kmalloc(struct_size, GFP_KERNEL);
+myblob->data = (void *) stats;
+myblob->size = (unsigned long) stats_size;
+\end{lstlisting}
+
+
+\item Now, create the file with permission 644.
+It finishes the initializing module.
+\begin{lstlisting}
+inputdir = debugfs_create_file("input", 0644, dir, NULL, &dbfs_fops);
+ptreedir = debugfs_create_blob("ptree", 0644, dir, myblob);
+\end{lstlisting}
+
+\item Finally, implement \texttt{exit\char`_module}. Make free \texttt{myblob} to prevent memory leakage and remove created filesa and directory.
+\begin{lstlisting}
+static void __exit dbfs_module_exit(void) {
+    kfree(myblob);
+    debugfs_remove(ptreedir);
+    debugfs_remove(inputdir);
+    debugfs_remove_recursive(dir);
+}
+\end{lstlisting}
+\end{enumerate}
 
 \section{paddr}
 % explain what you did to solve this phase in detail
+The purpose of this assignment is finding \texttt{pid}, virtual memory address and physical memory address of \texttt{app} file.
+Virtual address is a memory address that points the next virtual or physical memory.
+Using virtual address, a user can save/load data efficiently like cache.
+Thus, the virtual address is not a actual physical memory address and a computer system translates to communicate with virtual and physical memory.
+In each process, a process is allocated virtual memory address that has access to the actual physical memory address.
+The Gentoo OS used in the Lab has 4-level page table.
+By using multi-level page table, the process has more compact page table area in memory than single page table system process.
+The task in this assignment is thus in fact get physical address from \texttt{pid} and virtual address. Finding them are exremely easy.
+The followings are how I implemented it.
+
+\begin{enumerate}
+\item Define data struct to read, then store data from \texttt{user\char`_buffer}.
+We can syncronize \texttt{pckt} and \texttt{user\char`_buffer} by pointing the same address.
+Now, we get correct \texttt{pid} and \texttt{vaddr}.
+\begin{lstlisting}
+struct packet{
+    pid_t pid;
+    unsigned long vaddr;
+    unsigned long paddr;
+};
+pckt = (struct packet *)user_buffer;
+\end{lstlisting}
+
+\item Then, get the current task as we implemented in \texttt{ptree.}
+\begin{lstlisting}
+struct pid *pid;
+pid = find_get_pid(pckt->pid);
+task = pid_task(pid, PIDTYPE_PID);
+\end{lstlisting}
+
+\item Declare four page table offsets, and declare \texttt{page\char`_addr} and \texttt{page\char`_offset}.
+\begin{lstlisting}
+pgd_t *pgd;
+pud_t *pud;
+pmd_t *pmd;
+pte_t *pte;
+unsigned long page_addr = 0;
+unsigned long page_offset = 0;
+\end{lstlisting}
+
+\item Thanks to \texttt{p*d\char`_offset} API, we can easily get each offsets from the previous offset or \texttt{mm\char`_struct}.
+\begin{lstlisting}
+pgd = pgd_offset(task->mm, pckt->vaddr);
+pud = pud_offset(pgd, pckt->vaddr);
+pmd = pmd_offset(pud, pckt->vaddr);
+pte = pte_offset_kernel(pmd, pckt->vaddr);
+\end{lstlisting}
+
+\item Finally, get physical address.
+In this step, we use \texttt{PAGE\char`_MASK} to get \texttt{page\char`_addr} and \texttt{page\char`_offset}.
+The physcial address is a combination of page address and page offset.
+\begin{lstlisting}
+page_addr = pte_val(*pte) & PAGE_MASK;
+page_offset = pckt->vaddr & ~PAGE_MASK;
+pckt->paddr = page_addr | page_offset;
+\end{lstlisting}
+
+\item Create our output file, and don't forget to remove in exit phase.
+\begin{lstlisting}
+static int __init dbfs_module_init(void) {
+    dir = debugfs_create_dir("paddr", NULL);
+    output = debugfs_create_file("output", 0644, dir, pckt, &dbfs_fops
+    return 0;
+}
+
+static void __exit dbfs_module_exit(void) {
+		debugfs_remove(output);
+		debugfs_remove_recursive(dir);
+}
+
+\end{lstlisting}
+
+
+\end{enumerate}
