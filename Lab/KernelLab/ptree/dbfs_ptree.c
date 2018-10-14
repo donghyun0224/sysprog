@@ -11,6 +11,14 @@ static struct dentry *dir, *inputdir, *ptreedir;
 static struct task_struct *curr;
 struct debugfs_blob_wrapper *myblob; // Maximal data type
 
+// Simple stack
+
+struct stack {
+	struct task_struct *task;
+	struct stack *next;
+};
+
+
 char stats[SIZE];
 int i;
 
@@ -33,15 +41,36 @@ static ssize_t write_pid_to_input(struct file *fp,
         curr = pid_task(pid, PIDTYPE_PID);
 		// Find task_struct using input_pid. Hint: pid_task <- I used it!
 
+		
+		// TODO: Make a simple stack
+		struct stack *stack, *temp;
+
+		stack = (struct stack *) kmalloc(sizeof(struct stack), GFP_KERNEL);
+		temp = (struct stack *) kmalloc(sizeof(struct stack), GFP_KERNEL);
+
+		temp->next = NULL;
+		temp->task = curr;
+
+		// canaria will save us
+		
         // Tracing process tree from input_pid to init(1) process
         while(1) {
+			stack->next = temp;
             if (curr->pid == 1) break;
-            length += sprintf(stats + length, "%s (%d)\n", curr->comm, curr->pid);
             curr = curr->real_parent;
+			stack->task = curr;
+			temp = stack;
+			stack = (struct stack *) kmalloc(sizeof(struct stack), GFP_KERNEL);
         }
 
-        // Make Output Format string: process_command (process_id)
-        length += sprintf(stats + length, "%s (%d)\n", curr->comm, curr->pid);
+		stack = stack->next;
+
+		while(1) {
+			curr = stack->task;
+            length += sprintf(stats + length, "%s (%d)\n", curr->comm, curr->pid);
+			stack = stack->next;
+			if (stack == NULL) break;
+		}
 
         return length;
 }

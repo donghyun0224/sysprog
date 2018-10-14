@@ -3,8 +3,48 @@
 % describe your design, implementation, way to solve the lab
 % The Kernel lab consists of two phases: ptree and paddr.
 
+The kernel developers have to follow the convention for Linux Kernel Module.
+A basic frame for Linux Kernel Module is \texttt{init\char`_module} and \texttt{exit\char`_module}.
+The formal is called when the kernel module is inserted to system, and the latter is called when the kernel module is removed from system.
+The two functions are enrolled to the kernel using module init and module exit functions.
+Here is a basic structure for kernel module programming in \texttt{debugfs}:
+
+\begin{lstlisting}
+static ssize_t operation(struct file *fp, 
+                         const char __user *user_buffer, 
+                         size_t length, 
+                         loff_t *position)
+{
+    // Operation Details
+}
+
+static const struct file_operations dbfs_fops = {
+    .operation = operation,
+};
+
+static int __init dbfs_module_init(void)
+{
+    // Some Codes
+}
+
+static void __exit dbfs_module_exit(void)
+{
+    // Some Codes
+}
+\end{lstlisting}
+
+In each assignments, \texttt{ptree} and \texttt{paddr}, it has skeleton C code and build script.
+My task is implement to complete each codes.
+Fortunately, I did not have to fix the Makefile.
+
 \section{ptree}
 % explain what you did to solve this phase in detail
+The purpose of this Assignment is tracing process from the leaf to \texttt{init} process and logging it using \texttt{debugfs}.
+ssibal
+
+\begin{lstlisting}
+printf("Hello, World!");
+\end{lstlisting}
 
 \section{paddr}
 % explain what you did to solve this phase in detail
