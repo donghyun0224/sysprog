@@ -1,4 +1,8 @@
 \chapter{Kernel Lab}
-
-Short project description\\
-The goal of the kernel lab is to...
+% Short project description
+The goal of the kernel lab is to learn basic kernel module programming and understand the difference between kernel-level programming and user-level programming.
+To put the new feature into the kernel, we originally need to recompile the kernel.
+In my experience with installing Gentoo, it takes about 2 hours to compile, which is very annoying and risky.
+Instead, we can safely add new module with \texttt{debugfs} with very short time, since the modules we added disappear when we reboot the computer.
+The goal of this lab is adding two modules \texttt{ptree}, and \texttt{paddr}.
+What exactly each module does is introduced in the next chapter.
