@@ -182,6 +182,8 @@ task = pid_task(pid, PIDTYPE_PID);
 \end{lstlisting}
 
 \item Declare four page table offsets, and declare \texttt{page\char`_addr} and \texttt{page\char`_offset}.
+Here, \texttt{pgd} stands for \textit{page global directory}, \texttt{pud} stands for \textit{page upper directory}, \texttt{pmd} stands for \textit{page middle directory}, and \texttt{pte} stands for \textit{page table entry}.
+each directory maps the next directory, and we can trace it in reversely by offsets.
 \begin{lstlisting}
 pgd_t *pgd;
 pud_t *pud;
@@ -200,11 +202,15 @@ pte = pte_offset_kernel(pmd, pckt->vaddr);
 \end{lstlisting}
 
 \item Finally, get physical address.
-In this step, we use \texttt{PAGE\char`_MASK} to get \texttt{page\char`_addr} and \texttt{page\char`_offset}.
+In this step, we get page address by combining physical pagenumber and physical pageoffset.
+In our 64-bit Gentoo linux kernel, it uses 40 bits physical pagenumber and 12 bits physical pageoffset.
+Thus, we mask \texttt{pte\char`_val(*pte)} with \texttt{0xffffffffff000} to get 40 bits \texttt{PPN} and \texttt{pckt->vaddr} with \texttt{0xfff} of \texttt{PPO}.
+
+\texttt{page\char`_addr} and \texttt{page\char`_offset}.
 The physcial address is a combination of page address and page offset.
 \begin{lstlisting}
-page_addr = pte_val(*pte) & PTE_PFN_MASK;
-page_offset = pckt->vaddr & ~PTE_PFN_MASK;
+page_addr = pte_val(*pte) & 0xffffffffff000;
+page_offset = pckt->vaddr & 0xfff;
 pckt->paddr = page_addr | page_offset;
 \end{lstlisting}
 

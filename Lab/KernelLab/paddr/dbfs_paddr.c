@@ -51,21 +51,14 @@ static ssize_t read_output(struct file *fp,
 
 		// pgd, pud, pmd, pte phase
 		pgd = pgd_offset(task->mm, pckt->vaddr);
-		// Something printk statement
-
 		pud = pud_offset(pgd, pckt->vaddr);
-		// Something printk statement
-
 		pmd = pmd_offset(pud, pckt->vaddr);
-		// Something printk statement
-
 		pte = pte_offset_kernel(pmd, pckt->vaddr);
-		// Something printk statement
 
 
 		// paddr phase
-		page_addr = pte_val(*pte) & PTE_PFN_MASK;
-		page_offset = pckt->vaddr & ~PTE_PFN_MASK;
+		page_addr = pte_val(*pte) & 0xffffffffff000;
+		page_offset = pckt->vaddr & 0xfff;
 		pckt->paddr = page_addr | page_offset;
 
 		length += sizeof(struct packet);
