@@ -31,7 +31,7 @@ static ssize_t read_output(struct file *fp,
 
 		// TODO: Implement page table model.
 		// Currently, pid and vaddr is valid but paddr is zero.
-		
+
 
 		// Initialized task
 		struct pid *pid;
@@ -64,8 +64,8 @@ static ssize_t read_output(struct file *fp,
 
 
 		// paddr phase
-		page_addr = pte_val(*pte) & PAGE_MASK;
-		page_offset = pckt->vaddr & ~PAGE_MASK;
+		page_addr = pte_val(*pte) & PTE_PFN_MASK;
+		page_offset = pckt->vaddr & ~PTE_PFN_MASK;
 		pckt->paddr = page_addr | page_offset;
 
 		length += sizeof(struct packet);

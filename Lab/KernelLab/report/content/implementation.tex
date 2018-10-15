@@ -203,8 +203,8 @@ pte = pte_offset_kernel(pmd, pckt->vaddr);
 In this step, we use \texttt{PAGE\char`_MASK} to get \texttt{page\char`_addr} and \texttt{page\char`_offset}.
 The physcial address is a combination of page address and page offset.
 \begin{lstlisting}
-page_addr = pte_val(*pte) & PAGE_MASK;
-page_offset = pckt->vaddr & ~PAGE_MASK;
+page_addr = pte_val(*pte) & PTE_PFN_MASK;
+page_offset = pckt->vaddr & ~PTE_PFN_MASK;
 pckt->paddr = page_addr | page_offset;
 \end{lstlisting}
 
